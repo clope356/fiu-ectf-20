@@ -56,6 +56,8 @@ typedef struct {
 // struct to interpret drm metadata
 typedef struct __attribute__((__packed__)) {
     char md_size;
+    char magic_number_1;
+    char magic_number_2;
     char owner_id;
     char num_regions;
     char num_users;
@@ -67,17 +69,20 @@ typedef struct __attribute__((__packed__)) {
 // packing values skip over non-relevant WAV metadata
 typedef struct __attribute__((__packed__)) {
     char packing1[4];
-    u32 file_size;
+    int file_size;
     char packing2[32];
-    u32 wav_size;
+    int wav_size;
     drm_md md;
 } song;
 
 // accessors for variable-length metadata fields
 #define get_drm_rids(d) (d.md.buf)
 #define get_drm_uids(d) (d.md.buf + d.md.num_regions)
-#define get_drm_song(d) ((char *)(&d.md) + d.md.md_size)
+#define get_drm_song(d) ((char *)(&d.md) + 256)
 
+#define get_drm_rids_pdrm(d) (d->buf)
+#define get_drm_uids_pdrm(d) (d->buf + d->num_regions)
+#define get_drm_song_pdrm(d) ((char *)(d) + 256)
 
 // shared buffer values
 enum commands { QUERY_PLAYER, QUERY_SONG, LOGIN, LOGOUT, SHARE, PLAY, STOP, DIGITAL_OUT, PAUSE, RESTART, FF, RW };

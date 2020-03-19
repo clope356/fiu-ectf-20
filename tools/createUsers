@@ -6,7 +6,8 @@ Use: Once per user
 
 import json
 from argparse import ArgumentParser
-
+import secrets
+import os
 
 def main(user_list, outfile):
     """writes user secrets to json file
@@ -14,7 +15,7 @@ def main(user_list, outfile):
         users_ (string): string of users and pins seperated by colons e.g. user1:123456789
         outfile (string): name of file to write user_secrets to """
     try:
-        secrets = open(outfile, "w")
+        secret = open(outfile, "w")
     except Exception as e:
         print("Unable to open secrets file: %s" % (e,))
         return 0
@@ -26,8 +27,15 @@ def main(user_list, outfile):
             "Unable to parse user name and pin. Please make sure you entered the user-list as "
             "space seperated pairs of usernames and pins. Example: --user-list user1:12345678 user2:12345689")
     info = json.dumps(user_dict)
-    secrets.write(info)
-    secrets.close()
+    secret.write(info)
+    secret.close()
+    key = secrets.token_bytes(16)
+    path = outfile
+    path = os.path.split(path)[0]
+    path = os.path.join(path,"secret_key")
+    f = open(path, "wb")
+    f.write(key)
+    f.close()
 
 
 def get_args():
@@ -44,4 +52,5 @@ def get_args():
 if __name__ == '__main__':
     users, loc = get_args()
     print("generating user specific secrets")
+    
     main(users, loc)

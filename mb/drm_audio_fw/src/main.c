@@ -54,7 +54,10 @@ static XIntc InterruptController;
 void myISR(void) {
     InterruptProcessed = TRUE;
 }
+////////////////////////ADDED//////////////////////////////////////
 
+struct AES_ctx ctx;
+	
 
 //////////////////////// UTILITY FUNCTIONS ////////////////////////
 
@@ -144,14 +147,37 @@ int username_to_uid(char *username, char *uid, int provisioned_only) {
 }
 
 
+char arr[256];
 // loads the song metadata in the shared buffer into the local struct
-void load_song_md() {
-    s.song_md.md_size = c->song.md.md_size;
-    s.song_md.owner_id = c->song.md.owner_id;
-    s.song_md.num_regions = c->song.md.num_regions;
-    s.song_md.num_users = c->song.md.num_users;
-    memcpy(s.song_md.rids, (void *)get_drm_rids(c->song), s.song_md.num_regions);
-    memcpy(s.song_md.uids, (void *)get_drm_uids(c->song), s.song_md.num_users);
+int load_song_md() {
+    
+    //printf("Loading data\n");
+    
+    drm_md* base = (drm_md*) arr;
+    
+    memcpy(base,(void*)&(c->song.md.md_size),256);
+    for(int i = 0;i < 16;i++){
+	AES_ECB_decrypt(&ctx, ((char*)base)+(i*16));
+    }
+
+    if(((base->magic_number_1)!='Z')||((base->magic_number_2)!='Z')){
+        mb_printf("Cannot get song info.\r\n");
+	
+        return TRUE;
+    }
+
+    s.song_md.md_size = (base->md_size) + 1;
+    s.song_md.owner_id = base->owner_id;
+    s.song_md.num_regions = base->num_regions;
+    s.song_md.num_users = base->num_users;
+    memcpy(s.song_md.rids, (void *)get_drm_rids_pdrm(base), s.song_md.num_regions);
+    memcpy(s.song_md.uids, (void *)get_drm_uids_pdrm(base), s.song_md.num_users);
+    //mb_printf("metadata size: %d\r\n", s.song_md.md_size);
+    //mb_printf("owner id: %d\r\n", s.song_md.owner_id);
+    //mb_printf("num regions id: %d\r\n", s.song_md.num_regions);
+
+    
+    return FALSE;
 }
 
 
@@ -163,7 +189,10 @@ int is_locked() {
     if (!s.logged_in) {
         mb_printf("No user logged in");
     } else {
-        load_song_md();
+        //Check if song was provisioned for this device
+        if(load_song_md()){
+            return TRUE;
+	}
 
         // check if user is authorized to play song
         if (s.uid == s.song_md.owner_id) {
@@ -206,12 +235,14 @@ int is_locked() {
 // returns the size of the metadata in buf (including the metadata size field)
 // song metadata should be loaded before call
 int gen_song_md(char *buf) {
-    buf[0] = ((5 + s.song_md.num_regions + s.song_md.num_users) / 2) * 2; // account for parity
-    buf[1] = s.song_md.owner_id;
-    buf[2] = s.song_md.num_regions;
-    buf[3] = s.song_md.num_users;
-    memcpy(buf + 4, s.song_md.rids, s.song_md.num_regions);
-    memcpy(buf + 4 + s.song_md.num_regions, s.song_md.uids, s.song_md.num_users);
+    buf[0] = 255;
+    buf[1] = 'Z';
+    buf[2] = 'Z';
+    buf[3] = s.song_md.owner_id;
+    buf[4] = s.song_md.num_regions;
+    buf[5] = s.song_md.num_users;
+    memcpy(buf + 6, s.song_md.rids, s.song_md.num_regions);
+    memcpy(buf + 6 + s.song_md.num_regions, s.song_md.uids, s.song_md.num_users);
 
     return buf[0];
 }
@@ -281,10 +312,12 @@ void query_player() {
 
     for (int i = 0; i < NUM_PROVISIONED_REGIONS; i++) {
         strcpy((char *)q_region_lookup(c->query, i), REGION_NAMES[PROVISIONED_RIDS[i]]);
+	mb_printf("Region: %s\r\n", REGION_NAMES[PROVISIONED_RIDS[i]]);
     }
 
     for (int i = 0; i < NUM_PROVISIONED_USERS; i++) {
         strcpy((char *)q_user_lookup(c->query, i), USERNAMES[i]);
+	mb_printf("User: %s\r\n", USERNAMES[i]);
     }
 
     mb_printf("Queried player (%d regions, %d users)\r\n", c->query.num_regions, c->query.num_users);
@@ -296,7 +329,10 @@ void query_song() {
     char *name;
 
     // load song
-    load_song_md();
+    if(load_song_md()){
+        mb_printf("Can't query song\r\n");
+        return;
+    }
     memset((void *)&c->query, 0, sizeof(query));
 
     c->query.num_regions = s.song_md.num_regions;
@@ -326,9 +362,13 @@ void query_song() {
 void share_song() {
     int new_md_len, shift;
     char new_md[256], uid;
-
+    memset(new_md,0,256);
     // reject non-owner attempts to share
-    load_song_md();
+    if(load_song_md()){
+	c->song.wav_size = 0;
+        mb_printf("Can't share song\r\n");
+        return;
+    }
     if (!s.logged_in) {
         mb_printf("No user is logged in. Cannot share song\r\n");
         c->song.wav_size = 0;
@@ -344,19 +384,15 @@ void share_song() {
     }
 
     // generate new song metadata
+    
     s.song_md.uids[s.song_md.num_users++] = uid;
     new_md_len = gen_song_md(new_md);
-    shift = new_md_len - s.song_md.md_size;
 
-    // shift over song and add new metadata
-    if (shift) {
-        memmove((void *)get_drm_song(c->song) + shift, (void *)get_drm_song(c->song), c->song.wav_size);
+    for(int i = 0;i < 16;i++){
+	AES_ECB_encrypt(&ctx, new_md+(i*16));
     }
-    memcpy((void *)&c->song.md, new_md, new_md_len);
-
-    // update file size
-    c->song.file_size += shift;
-    c->song.wav_size  += shift;
+    
+    memcpy((void *)&c->song.md, new_md, 256);
 
     mb_printf("Shared song with '%s'\r\n", c->username);
 }
@@ -367,7 +403,10 @@ void play_song() {
     u32 counter = 0, rem, cp_num, cp_xfil_cnt, offset, dma_cnt, length, *fifo_fill;
 
     mb_printf("Reading Audio File...");
-    load_song_md();
+    if(load_song_md()){
+        mb_printf("Can't play song\r\n");
+        return;
+    }
 
     // get WAV length
     length = c->song.wav_size;
@@ -423,6 +462,10 @@ void play_song() {
         Xil_MemCpy((void *)(XPAR_MB_DMA_AXI_BRAM_CTRL_0_S_AXI_BASEADDR + offset),
                    (void *)(get_drm_song(c->song) + length - rem),
                    (u32)(cp_num));
+        ///////////////////////////////////////
+        for(int i = 0;i < cp_num/16;i++){
+	     AES_ECB_decrypt(&ctx, ((char*)XPAR_MB_DMA_AXI_BRAM_CTRL_0_S_AXI_BASEADDR) + offset+(i*16));
+        }
 
         cp_xfil_cnt = cp_num;
 
@@ -446,22 +489,65 @@ void play_song() {
     }
 }
 
-
+char s_base[CHUNK_SZ];
 // removes DRM data from song for digital out
 void digital_out() {
     // remove metadata size from file and chunk sizes
-    c->song.file_size -= c->song.md.md_size;
-    c->song.wav_size -= c->song.md.md_size;
+    
+    c->song.file_size -= 256;
+    c->song.wav_size -= 256;
+
+    int file_size = c->song.file_size;
+    int wav_size = c->song.wav_size;
 
     if (is_locked() && PREVIEW_SZ < c->song.wav_size) {
         mb_printf("Only playing 30 seconds");
-        c->song.file_size -= c->song.wav_size - PREVIEW_SZ;
-        c->song.wav_size = PREVIEW_SZ;
-    }
+        
+	file_size -= c->song.wav_size - PREVIEW_SZ;
+	c->song.file_size = file_size;
+	wav_size = PREVIEW_SZ;
+	c->song.wav_size = wav_size;
 
+    }
+    //mb_printf("Wav size: %d\r\n",wav_size);
+    //int percent = 0;
+    int rem = wav_size;
+    int cp_num;
+    char* base = ((char*)get_drm_song(c->song));
+    while(rem > 0) {
+	// calculate write size and offset
+        cp_num = (rem > CHUNK_SZ) ? CHUNK_SZ : rem;
+        //offset = (counter++ % 2 == 0) ? 0 : CHUNK_SZ;
+	memcpy(s_base,base + wav_size - rem,cp_num);
+	for(int i = 0;i < cp_num/16;i++){
+
+		AES_ECB_decrypt(&ctx, (s_base+(i*16)));
+
+
+		//if(!(i%(wav_size/1600))){
+             	//	mb_printf("Percent complete: %d\r\n",percent);
+             	//	percent++;
+		//}
+    	}
+	memcpy(base + wav_size - rem,s_base,cp_num);
+	rem -= cp_num;
+    }
+    /*for(int i = 0;i < wav_size/16;i++){
+
+	AES_ECB_decrypt(&ctx, (base+(i*16)));
+
+
+	if(!(i%(wav_size/1600))){
+             mb_printf("Percent complete: %d\r\n",percent);
+             percent++;
+	}
+
+
+    }*/
+    
     // move WAV file up in buffer, skipping metadata
     mb_printf(MB_PROMPT "Dumping song (%dB)...", c->song.wav_size);
-    memmove((void *)&c->song.md, (void *)get_drm_song(c->song), c->song.wav_size);
+    memmove((void *)&c->song.md, (void *)get_drm_song(c->song), wav_size);
 
     mb_printf("Song dump finished\r\n");
 }
@@ -502,9 +588,8 @@ int main() {
 
     // clear command channel
     memset((void*)c, 0, sizeof(cmd_channel));
-
+    AES_init_ctx(&ctx, key);
     mb_printf("Audio DRM Module has Booted\n\r");
-
     // Handle commands forever
     while(1) {
         // wait for interrupt to start
@@ -545,6 +630,7 @@ int main() {
             c->login_status = s.logged_in;
             usleep(500);
             set_stopped();
+
         }
     }
 

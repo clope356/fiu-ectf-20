@@ -6,8 +6,15 @@ Use: Once per device
 import os
 import json
 from argparse import ArgumentParser
+secret_key = ""
 
-
+def key_to_str(key):
+    keyr = '{'
+    for k in key:
+        keyr = keyr + "," + str(k)
+    keyr = keyr + '};'
+    keyr = keyr[0]+keyr[2:]
+    return keyr
 
 def main(region_names, user_names, user_secrets, region_secrets, device_dir):
     file_name = "device_secrets"
@@ -41,7 +48,8 @@ def main(region_names, user_names, user_secrets, region_secrets, device_dir):
         print("Unable to create secrets file: {e} "
               "Please ensure all regions entered are in the list: {user_secrets}".format(e=e, user_secrets=user_secrets.keys()))
         return
-
+    #print(region_names)
+    #exit(0)
     # write secrets
     device_secrets.write(f'''
 #ifndef SECRETS_H
@@ -61,7 +69,7 @@ const u8 USER_IDS[] = {{ {", ".join([str(user_secrets[u]['id']) for u in user_na
 #define NUM_PROVISIONED_USERS {len(user_names)}
 const u8 PROVISIONED_UIDS[] = {{ {", ".join(uids)} }};
 const char *PROVISIONED_PINS[] = {{ {", ".join(['"' + user_secrets[u]['pin'] + '"' for u in user_names])} }};
-
+const char key[] = {secret_key}
 #endif // SECRETS_H
 ''')
 
@@ -84,6 +92,14 @@ def get_args():
 if __name__ == '__main__':
     region_names, region_secrets, usernames, user_secrets, device_dir = get_args()
     print("generating device specific secrets")
+    path = region_secrets
+    path = os.path.split(path)[0]
+    path = os.path.join(path,"secret_key")
+    f = open(path,"rb")
+    secret_key = f.read(16)
+    secret_key = key_to_str(secret_key)
+    
+    
     user_secrets = json.load(open(os.path.abspath(user_secrets)))
     region_secrets = json.load(open(os.path.abspath(region_secrets)))
     main(region_names, usernames, user_secrets, region_secrets, device_dir)
