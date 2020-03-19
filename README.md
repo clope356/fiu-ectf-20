@@ -1,2 +1,2 @@
-# FIU ECTF 2020 Submission
+# FIU ECTF 2020
 
