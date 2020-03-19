@@ -69,7 +69,7 @@ def create_metadata(regions, user, user_secret_location, region_info):
         metadata (bytes): bytes of encoded metadata
     Example:
         >>create_metadata(['USA', 'Canada'], 'user1', 'user_secrets.json', {'USA': 1, 'Canada':2})
-        'x06/x00/x01/x00/x01/x02'
+        'xFF/x90/x90/x00/x01/x00/x01/x02'
     """
     user_secrets = json.load(open(os.path.abspath(user_secret_location)))
 
