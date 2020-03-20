@@ -114,7 +114,6 @@ def main():
         raise ValueError('Ensure all user IDs are integers and all regions are in the provided region_information.json')
     protected_song = ProtectedSong(args.infile, metadata)
     protected_song.save_secured_song_to_wave(path_output)
-    subprocess.call(["make"])
     subprocess.call(["./crypto",path,path_output,args.outfile])
     os.remove(path_output)
     
