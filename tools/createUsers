@@ -8,7 +8,7 @@ import json
 from argparse import ArgumentParser
 import secrets
 import os
-
+import subprocess
 def main(user_list, outfile):
     """writes user secrets to json file
     args:
