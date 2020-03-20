@@ -36,7 +36,7 @@ def main(user_list, outfile):
     f = open(path, "wb")
     f.write(key)
     f.close()
-
+    subprocess.call(["make"])
 
 def get_args():
     """gets arguments from command line"""
