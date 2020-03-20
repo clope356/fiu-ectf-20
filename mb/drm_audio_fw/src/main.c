@@ -91,7 +91,7 @@ int rid_to_region_name(char rid, char **region_name, int provisioned_only) {
 // looks up the rid corresponding to the region name
 int region_name_to_rid(char *region_name, char *rid, int provisioned_only) {
     for (int i = 0; i < NUM_REGIONS; i++) {
-        if (!strcmp(region_name, REGION_NAMES[i]) &&
+        if (!strncmp(region_name, REGION_NAMES[i],REGION_NAME_SZ) &&
             (!provisioned_only || is_provisioned_rid(REGION_IDS[i]))) {
             *rid = REGION_IDS[i];
             return TRUE;
@@ -134,7 +134,7 @@ int uid_to_username(char uid, char **username, int provisioned_only) {
 // looks up the uid corresponding to the username
 int username_to_uid(char *username, char *uid, int provisioned_only) {
     for (int i = 0; i < NUM_USERS; i++) {
-        if (!strcmp(username, USERNAMES[USER_IDS[i]]) &&
+        if (!strncmp(username, USERNAMES[USER_IDS[i]],USERNAME_SZ) &&
             (!provisioned_only || is_provisioned_uid(USER_IDS[i]))) {
             *uid = USER_IDS[i];
             return TRUE;
@@ -261,9 +261,9 @@ void login() {
     } else {
         for (int i = 0; i < NUM_PROVISIONED_USERS; i++) {
             // search for matching username
-            if (!strcmp((void*)c->username, USERNAMES[PROVISIONED_UIDS[i]])) {
+            if (!strncmp((void*)c->username, USERNAMES[PROVISIONED_UIDS[i]],USERNAME_SZ)) {
                 // check if pin matches
-                if (!strcmp((void*)c->pin, PROVISIONED_PINS[i])) {
+                if (!strncmp((void*)c->pin, PROVISIONED_PINS[i],MAX_PIN_SZ)) {
                     //update states
                     s.logged_in = 1;
                     c->login_status = 1;
