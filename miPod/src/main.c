@@ -106,8 +106,8 @@ void login(char *username, char *pin) {
     }
 
     // drive DRM
-    strcpy((void*)c->username, username);
-    strcpy((void*)c->pin, pin);
+    strncpy((void*)c->username, username, USERNAME_SZ);
+    strncpy((void*)c->pin, pin, MAX_PIN_SZ);
     send_command(LOGIN);
 }
 
@@ -197,7 +197,7 @@ void share_song(char *song_name, char *username) {
         return;
     }
 
-    strcpy((char *)c->username, username);
+    strncpy((char *)c->username, username, USERNAME_SZ);
 
     // drive DRM
     send_command(SHARE);
@@ -265,31 +265,31 @@ int play_song(char *song_name) {
         parse_input(usr_cmd, &cmd, &arg1, &arg2);
         if (!cmd) {
             continue;
-        } else if (!strcmp(cmd, "help")) {
+        } else if (!strncmp(cmd, "help", 4)) {
             print_playback_help();
-        } else if (!strcmp(cmd, "resume")) {
+        } else if (!strncmp(cmd, "resume", 6)) {
             send_command(PLAY);
             usleep(200000); // wait for DRM to print
-        } else if (!strcmp(cmd, "pause")) {
+        } else if (!strncmp(cmd, "pause", 5)) {
             send_command(PAUSE);
             usleep(200000); // wait for DRM to print
-        } else if (!strcmp(cmd, "stop")) {
+        } else if (!strncmp(cmd, "stop", 4)) {
             send_command(STOP);
             usleep(200000); // wait for DRM to print
             break;
-        } else if (!strcmp(cmd, "restart")) {
+        } else if (!strncmp(cmd, "restart", 7)) {
             send_command(RESTART);
-        } else if (!strcmp(cmd, "exit")) {
+        } else if (!strncmp(cmd, "exit", 4)) {
             mp_printf("Exiting...\r\n");
             send_command(STOP);
             return -1;
-        } else if (!strcmp(cmd, "rw")) {
+        } else if (!strncmp(cmd, "rw", 2)) {
             mp_printf("Unsupported feature.\r\n\r\n");
             print_playback_help();
-        } else if (!strcmp(cmd, "ff")) {
+        } else if (!strncmp(cmd, "ff", 2)) {
             mp_printf("Unsupported feature.\r\n\r\n");
             print_playback_help();
-        } else if (!strcmp(cmd, "lyrics")) {
+        } else if (!strncmp(cmd, "lyrics", 6)) {
             mp_printf("Unsupported feature.\r\n\r\n");
             print_playback_help();
         } else {
