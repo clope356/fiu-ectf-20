@@ -147,10 +147,10 @@ int username_to_uid(char *username, char *uid, int provisioned_only) {
 }
 
 
-
+char arr[256];
 // loads the song metadata in the shared buffer into the local struct
 int load_song_md() {
-    char arr[256];
+    
     //printf("Loading data\n");
     
     drm_md* base = (drm_md*) arr;
