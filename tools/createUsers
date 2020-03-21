@@ -9,6 +9,7 @@ from argparse import ArgumentParser
 import secrets
 import os
 import subprocess
+import hashlib
 def main(user_list, outfile):
     """writes user secrets to json file
     args:
@@ -21,11 +22,20 @@ def main(user_list, outfile):
         return 0
 
     try:
-        user_dict = {user.split(":")[0]: {"pin": user.split(":")[1], "id": num} for num, user in enumerate(user_list)}
+        #user_dict = {user.split(":")[0]: {"pin": user.split(":")[1], "id": num} for num, user in enumerate(user_list)}
+        user_dict = {}
+        for num, user in enumerate(user_list):
+            hash256 = hashlib.sha256()
+            hash256.update(user.split(":")[1].encode("utf-8"))
+            pin_hash = hash256.hexdigest()
+            user_dict[user.split(":")[0]] = {"pin": pin_hash, "id": num}
+            
+        #print(user_dict)
     except IndexError:
         raise Exception(
             "Unable to parse user name and pin. Please make sure you entered the user-list as "
             "space seperated pairs of usernames and pins. Example: --user-list user1:12345678 user2:12345689")
+    
     info = json.dumps(user_dict)
     secret.write(info)
     secret.close()
@@ -37,7 +47,9 @@ def main(user_list, outfile):
     f.write(key)
     f.close()
     subprocess.call(["make"])
-
+    
+    
+   
 def get_args():
     """gets arguments from command line"""
     parser = ArgumentParser(description='main interface to provision system')
