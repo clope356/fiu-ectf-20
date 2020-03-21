@@ -9,16 +9,19 @@ LD_SRCS += \
 C_SRCS += \
 ../src/main.c \
 ../src/platform.c \
+../src/sha-256.c \
 ../src/util.c 
 
 OBJS += \
 ./src/main.o \
 ./src/platform.o \
+./src/sha-256.o \
 ./src/util.o 
 
 C_DEPS += \
 ./src/main.d \
 ./src/platform.d \
+./src/sha-256.d \
 ./src/util.d 
 
 
