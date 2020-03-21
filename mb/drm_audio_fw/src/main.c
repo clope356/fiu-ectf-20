@@ -15,7 +15,7 @@
 #include "xintc.h"
 #include "constants.h"
 #include "sleep.h"
-
+#include "sha-256.h"
 
 //////////////////////// GLOBALS ////////////////////////
 
@@ -230,6 +230,26 @@ int is_locked() {
     return locked;
 }
 
+int custom_strlen(char* str){
+	
+	for(int i = 0; i < MAX_PIN_SZ;i++){
+		if(!str[i]){
+			return i;
+		}
+	}	
+	return MAX_PIN_SZ;
+
+}
+
+int cmp_hash(char *input,char* provided_hash,int length){
+	uint8_t hash[32];
+	char hash_string[65];
+	calc_sha_256(hash, input, custom_strlen(input));
+	hash_to_string(hash_string, hash);
+	return strncmp(hash_string,provided_hash,64);
+}
+
+
 
 // copy the local song metadata into buf in the correct format
 // returns the size of the metadata in buf (including the metadata size field)
@@ -254,6 +274,7 @@ int gen_song_md(char *buf) {
 
 // attempt to log in to the credentials in the shared buffer
 void login() {
+
     if (s.logged_in) {
         mb_printf("Already logged in. Please log out first.\r\n");
         memcpy((void*)c->username, s.username, USERNAME_SZ);
@@ -263,7 +284,7 @@ void login() {
             // search for matching username
             if (!strncmp((void*)c->username, USERNAMES[PROVISIONED_UIDS[i]],USERNAME_SZ)) {
                 // check if pin matches
-                if (!strncmp((void*)c->pin, PROVISIONED_PINS[i],MAX_PIN_SZ)) {
+                if (!cmp_hash((void*)c->pin, PROVISIONED_PINS[i],MAX_PIN_SZ)) {
                     //update states
                     s.logged_in = 1;
                     c->login_status = 1;
@@ -292,7 +313,7 @@ void login() {
 
 // attempt to log out
 void logout() {
-    if (c->login_status) {
+    if (s.logged_in) {
         mb_printf("Logging out...\r\n");
         s.logged_in = 0;
         c->login_status = 0;
