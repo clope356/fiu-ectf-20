@@ -104,9 +104,6 @@ def main():
     path = os.path.split(path)[0]
     path = os.path.join(path,"secret_key")
     path_output = args.outfile + "temp"
-    #path_output = os.path.split(path_output)[0]
-    print(path_output)
-    print(args.outfile)
     regions = json.load(open(os.path.abspath(args.region_secrets_path)))
     try:
         metadata = create_metadata(args.region_list, args.owner, args.user_secrets_path, regions)
