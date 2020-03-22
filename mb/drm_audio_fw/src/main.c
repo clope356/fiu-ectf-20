@@ -43,7 +43,8 @@ volatile cmd_channel *c = (cmd_channel*)SHARED_DDR_BASE;
 // internal state store
 internal_state s;
 
-
+char s_base[CHUNK_SZ];
+char metadata_buff[256];
 //////////////////////// INTERRUPT HANDLING ////////////////////////
 
 
@@ -147,13 +148,12 @@ int username_to_uid(char *username, char *uid, int provisioned_only) {
 }
 
 
-char arr[256];
 // loads the song metadata in the shared buffer into the local struct
 int load_song_md() {
     
     //printf("Loading data\n");
     
-    drm_md* base = (drm_md*) arr;
+    drm_md* base = (drm_md*) metadata_buff;
     
     memcpy(base,(void*)&(c->song.md.md_size),256);
     for(int i = 0;i < 16;i++){
@@ -333,12 +333,10 @@ void query_player() {
 
     for (int i = 0; i < NUM_PROVISIONED_REGIONS; i++) {
         strcpy((char *)q_region_lookup(c->query, i), REGION_NAMES[PROVISIONED_RIDS[i]]);
-	mb_printf("Region: %s\r\n", REGION_NAMES[PROVISIONED_RIDS[i]]);
     }
 
     for (int i = 0; i < NUM_PROVISIONED_USERS; i++) {
         strcpy((char *)q_user_lookup(c->query, i), USERNAMES[i]);
-	mb_printf("User: %s\r\n", USERNAMES[i]);
     }
 
     mb_printf("Queried player (%d regions, %d users)\r\n", c->query.num_regions, c->query.num_users);
@@ -514,7 +512,6 @@ void play_song() {
 // removes DRM data from song for digital out
 void digital_out() {
     // remove metadata size from file and chunk sizes
-    char s_base[CHUNK_SZ];
     c->song.file_size -= 256;
     c->song.wav_size -= 256;
 
