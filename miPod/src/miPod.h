@@ -13,10 +13,10 @@
 #define USR_CMD_SZ 64
 
 // protocol constants
-#define MAX_REGIONS 32
+#define MAX_REGIONS 64
 #define REGION_NAME_SZ 64
 #define MAX_USERS 64
-#define USERNAME_SZ 16
+#define USERNAME_SZ 64
 #define MAX_PIN_SZ 64
 #define MAX_SONG_SZ (1<<25)
 
