@@ -206,7 +206,7 @@ int is_locked() {
         }
 
         if (locked) {
-            mb_printf("User '%s' does not have access to this song", s.username);
+            mb_printf("User '%s' does not have access to this song\r\n", s.username);
             return locked;
         }
         mb_printf("User '%s' has access to this song", s.username);
@@ -222,9 +222,9 @@ int is_locked() {
         }
 
         if (!locked) {
-            mb_printf("Region Match. Full Song can be played. Unlocking...");
+            mb_printf("Region Match. Full Song can be played. Unlocking...\r\n");
         } else {
-            mb_printf("Invalid region");
+            mb_printf("Invalid region\r\n");
         }
     }
     return locked;
