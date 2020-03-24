@@ -469,7 +469,9 @@ void play_song() {
                 mb_printf("Restarting song... \r\n");
                 rem = length; // reset song counter
 		started = rem;
+		usleep(500000);
                 set_playing();
+			   
             default:
                 break;
             }
