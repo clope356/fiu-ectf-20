@@ -420,7 +420,7 @@ void share_song() {
 // plays a song and looks for play-time commands
 void play_song() {
     u32 counter = 0, rem, cp_num, cp_xfil_cnt, offset, dma_cnt, length, *fifo_fill;
-
+    int started;
     mb_printf("Reading Audio File...");
     if(load_song_md()){
         mb_printf("Can't play song\r\n");
@@ -442,7 +442,7 @@ void play_song() {
 
     rem = length;
     fifo_fill = (u32 *)XPAR_FIFO_COUNT_AXI_GPIO_0_BASEADDR;
-
+    started = rem;
     // write entire file to two-block codec fifo
     // writes to one block while the other is being played
     set_playing();
@@ -454,6 +454,7 @@ void play_song() {
             switch (c->cmd) {
             case PAUSE:
                 mb_printf("Pausing... \r\n");
+		started = rem;
                 set_paused();
                 while (!InterruptProcessed) continue; // wait for interrupt
                 break;
@@ -467,6 +468,7 @@ void play_song() {
             case RESTART:
                 mb_printf("Restarting song... \r\n");
                 rem = length; // reset song counter
+		started = rem;
                 set_playing();
             default:
                 break;
@@ -494,7 +496,7 @@ void play_song() {
             // DMA must run first for this to yield the proper state
             // rem != length checks for first run
             while (XAxiDma_Busy(&sAxiDma, XAXIDMA_DMA_TO_DEVICE)
-                   && rem != length && *fifo_fill < (FIFO_CAP - 32));
+                   && rem != started && *fifo_fill < (FIFO_CAP - 32));
 
             // do DMA
             dma_cnt = (FIFO_CAP - *fifo_fill > cp_xfil_cnt)
