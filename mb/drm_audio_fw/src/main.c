@@ -198,7 +198,7 @@ int is_locked() {
         if (s.uid == s.song_md.owner_id) {
             locked = FALSE;
         } else {
-            for (int i = 0; i < NUM_PROVISIONED_USERS && locked; i++) {
+            for (int i = 0; i < s.song_md.num_users && locked; i++) {
                 if (s.uid == s.song_md.uids[i]) {
                     locked = FALSE;
                 }
