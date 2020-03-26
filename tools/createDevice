@@ -5,6 +5,7 @@ Use: Once per device
 """
 import os
 import json
+import random
 from argparse import ArgumentParser
 secret_key = ""
 
@@ -48,8 +49,24 @@ def main(region_names, user_names, user_secrets, region_secrets, device_dir):
         print("Unable to create secrets file: {e} "
               "Please ensure all regions entered are in the list: {user_secrets}".format(e=e, user_secrets=user_secrets.keys()))
         return
-    #print(region_names)
-    #exit(0)
+    total = random.randint(1,1000)
+    
+    iv1 = []
+    for i in range(total):
+        iv1.append(random.randint(1,255))
+    iv1str = "{"
+    for digit in iv1:
+        iv1str += str(digit) + ","
+    iv1str += str(random.randint(1,255)) + "};"
+    total = random.randint(1,1000)
+    
+    iv2 = []
+    for i in range(total):
+        iv2.append(random.randint(1,255))
+    iv2str = "{"
+    for digit in iv2:
+        iv2str += str(digit) + ","
+    iv2str += str(random.randint(1,255)) + "};"
     # write secrets
     device_secrets.write(f'''
 #ifndef SECRETS_H
@@ -69,7 +86,11 @@ const u8 USER_IDS[] = {{ {", ".join([str(user_secrets[u]['id']) for u in user_na
 #define NUM_PROVISIONED_USERS {len(user_names)}
 const u8 PROVISIONED_UIDS[] = {{ {", ".join(uids)} }};
 const char *PROVISIONED_PINS[] = {{ {", ".join(['"' + user_secrets[u]['pin'] + '"' for u in user_names])} }};
+
+const char iv1[] = {iv1str}
 const char key[] = {secret_key}
+const char iv2[] = {iv2str}
+
 #endif // SECRETS_H
 ''')
 
